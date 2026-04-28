@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./laravel_app
+      dockerfile: Dockerfile
+    container_name: dividend_laravel_app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./laravel_app:/var/www
+    depends_on:
+      - db
+      - redis
+    networks:
+      - dividend_network
+
+  webserver:
+    image: nginx:alpine
+    container_name: dividend_webserver
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./laravel_app:/var/www
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - dividend_network
+
+  db:
+    image: mysql:8.0
+    container_name: dividend_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: dividend_tracker
+      MYSQL_ROOT_PASSWORD: secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - dividend_network
+
+  redis:
+    image: redis:alpine
+    container_name: dividend_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - dividend_network
+
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: dividend_scraper
+    restart: unless-stopped
+    volumes:
+      - ./scraper:/app
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      DB_DATABASE: dividend_tracker
+    networks:
+      - dividend_network
+
+networks:
+  dividend_network:
+    driver: bridge
+
+volumes:
+  dbdata:
