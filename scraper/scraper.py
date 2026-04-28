@@ -2,6 +2,7 @@ import os
 import time
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 import mysql.connector
 from dotenv import load_dotenv
 
@@ -16,16 +17,22 @@ DB_NAME = os.getenv("DB_DATABASE", "laravel")
 CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/announcements/?category=CORPORATE%20DISCLOSURE"
 
 def get_db_connection():
-    try:
-        return mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME
-        )
-    except mysql.connector.Error as err:
-        print(f"Error connecting to database: {err}")
-        return None
+    max_retries = 5
+    for i in range(max_retries):
+        try:
+            return mysql.connector.connect(
+                host=DB_HOST,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                database=DB_NAME
+            )
+        except mysql.connector.Error as err:
+            if i < max_retries - 1:
+                print(f"Database connection failed, retrying in 5s... ({i+1}/{max_retries})")
+                time.sleep(5)
+            else:
+                print(f"Error connecting to database after {max_retries} attempts: {err}")
+                return None
 
 def fetch_announcements():
     try:
@@ -51,7 +58,13 @@ def parse_dividends(html_content):
         cols = row.find_all('td')
         if len(cols) >= 3:
             symbol = cols[0].text.strip()
-            date = cols[1].text.strip()
+            date_raw = cols[1].text.strip()
+            # Convert DD-MM-YYYY to YYYY-MM-DD for MySQL
+            try:
+                date_obj = datetime.strptime(date_raw, '%d-%m-%Y')
+                mysql_date = date_obj.strftime('%Y-%m-%d')
+            except ValueError:
+                mysql_date = None # Or handle appropriately
             title = cols[2].text.strip().lower()
             
             # Check for dividend keywords
@@ -75,7 +88,7 @@ def parse_dividends(html_content):
                     'amount_per_share': amount_per_share,
                     'type': dividend_type,
                     'raw_text': title,
-                    'date': date
+                    'date': mysql_date
                 })
                 
     return dividends
@@ -92,7 +105,7 @@ def store_dividends(dividends):
     
     for div in dividends:
         # Insert announcement
-        sql_ann = "INSERT INTO announcements (symbol, announcement_type, date, raw_text) VALUES (%s, %s, %s, %s)"
+        sql_ann = "INSERT INTO announcements (symbol, announcement_type, date, raw_text, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
         val_ann = (div['symbol'], 'Dividend', div['date'], div['raw_text'])
         
         # Insert processed dividend
