@@ -21,5 +21,5 @@ echo -e "\n[5/5] Starting the scraper..."
 docker exec dividend_scraper python scraper.py
 
 echo -e "\nSystem is up and running!"
-echo "Dashboard: http://localhost:8000"
+echo "Dashboard: http://localhost:8001"
 echo "phpMyAdmin: http://localhost:8080 (if configured)"
