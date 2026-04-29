@@ -4,7 +4,7 @@
 set -e
 
 echo "[1/4] Starting Docker containers..."
-docker-compose up -d --build
+docker compose up -d --build
 
 echo "[2/4] Waiting for database to be ready..."
 # Give MySQL some time to initialize
