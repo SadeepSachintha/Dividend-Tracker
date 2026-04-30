@@ -135,4 +135,19 @@ def run():
             print("No dividend announcements found.")
 
 if __name__ == "__main__":
-    run()
+    import sys
+    
+    # Allow running once via command line argument (e.g., for manual triggers)
+    if len(sys.argv) > 1 and sys.argv[1] == '--once':
+        run()
+    else:
+        # Continuous polling mode
+        print("Scraper service started. Polling every hour...")
+        while True:
+            try:
+                run()
+            except Exception as e:
+                print(f"Unexpected error during scrape: {e}")
+            
+            print("Sleeping for 1 hour before next scrape...")
+            time.sleep(3600)

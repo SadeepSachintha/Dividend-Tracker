@@ -13,7 +13,7 @@ A high-performance, real-time dividend tracking system designed to monitor **Col
 
 The system utilizes a robust **Producer-Consumer** architecture containerized with Docker:
 
--   **The Producer (Python Scraper)**: A dedicated service that polls the CSE website, parses complex announcement tables, and synchronizes the latest dividend events into a shared MySQL database.
+-   **The Producer (Python Scraper)**: An autonomous background service that polls the CSE website every hour, parses complex announcement tables, and synchronizes the latest dividend events into a shared MySQL database.
 -   **The Broker (Redis)**: Manages communication and real-time broadcasting queues.
 -   **The Consumer (Laravel 12)**: A modern web interface that processes user holdings, calculates upcoming payouts, and broadcasts live alerts.
 -   **Real-Time Engine (Laravel Reverb)**: Powers the WebSocket server for instantaneous dashboard updates without page refreshes.
@@ -80,6 +80,9 @@ The Laravel application requires several specific PHP extensions to handle the d
 
 ### Build Issues
 If the build fails on your local machine, ensure you are using **LF** line endings for the `Dockerfile`. If a container hangs, verify that your machine has enough allocated RAM (minimum 2GB recommended).
+
+### Scraper Restarting
+If you see an error stating "Container is restarting, wait until the container is running", it means the scraper script has exited. The scraper is now configured to run in a continuous loop (`while True:`) to prevent this.
 
 ---
 

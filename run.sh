@@ -16,10 +16,8 @@ docker exec dividend_laravel_app composer install
 echo "[4/4] Running database migrations..."
 docker exec dividend_laravel_app php artisan migrate --force
 
-echo -e "\n[5/5] Starting the scraper..."
-# Run the scraper in the background or as a one-off
-docker exec dividend_scraper python scraper.py
-
+echo -e "\n[5/5] Scraper service is running in the background..."
+# The scraper now runs continuously on its own, so we don't need to manually execute it.
 echo -e "\nSystem is up and running!"
 echo "Dashboard: http://localhost:8001"
 echo "phpMyAdmin: http://localhost:8080 (if configured)"
