@@ -55,7 +55,9 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 
 ## ☁️ Automated Deployment (CI/CD)
 
-The project features a fully automated pipeline using **GitHub Actions** and **Tailscale** for secure deployment to an Ubuntu VM, even behind residential CGNAT/Firewalls.
+The project features a high-performance CI/CD pipeline using **GitHub Actions**, **GHCR (GitHub Container Registry)**, and **Tailscale**. 
+
+To prevent resource exhaustion on the target VM, Docker images are pre-built and compiled on GitHub's infrastructure and then pushed to GHCR. The VM simply pulls the latest images and restarts the containers.
 
 ### 1. Required GitHub Secrets
 Navigate to **Settings > Secrets and variables > Actions** and add:
@@ -67,12 +69,16 @@ Navigate to **Settings > Secrets and variables > Actions** and add:
 | `VM_SSH_KEY` | Your OpenSSH Private Key. |
 | `TAILSCALE_AUTHKEY` | A reusable Auth Key from the Tailscale Admin Console. |
 
-### 2. Triggering Deployment
-Simply push your changes to the main branch:
+### 2. Deployment Workflow
+1.  **Continuous Integration**: On every push to `main`, GitHub Actions builds the Laravel and Python scraper images.
+2.  **Image Registry**: Built images are pushed to **GHCR** (tagged as `latest`).
+3.  **Secure Handshake**: The runner connects to your private Tailscale network.
+4.  **Zero-Touch Deploy**: The runner SSHes into your VM, logs into GHCR, pulls the latest images, and restarts the system.
+
+Simply trigger the flow with:
 ```bash
 git push origin main
 ```
-*The workflow will verify code quality, connect to your private Tailscale network, and update the production containers on your VM.*
 
 ---
 

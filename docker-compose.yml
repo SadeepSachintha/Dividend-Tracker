@@ -1,5 +1,6 @@
 services:
   app:
+    image: ghcr.io/sadeepsachintha/dividend-tracker/app:latest
     build:
       context: ./laravel_app
       dockerfile: Dockerfile
@@ -59,6 +60,7 @@ services:
       - dividend_network
 
   scraper:
+    image: ghcr.io/sadeepsachintha/dividend-tracker/scraper:latest
     build:
       context: ./scraper
       dockerfile: Dockerfile
