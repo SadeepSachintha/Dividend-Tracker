@@ -5,16 +5,18 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import mysql.connector
 from dotenv import load_dotenv
+import re
 
-# Load environment variables (we will share the .env with Laravel or use a separate one)
+# Load environment variables
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_USER = os.getenv("DB_USERNAME", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_DATABASE", "laravel")
+DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
-CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/announcements/?category=CORPORATE%20DISCLOSURE"
+CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/smd/getAnnouncementData"
+CSE_API_KEY = "Q3NlMTIzQXBp"
 
 def get_db_connection():
     max_retries = 5
@@ -36,60 +38,78 @@ def get_db_connection():
 
 def fetch_announcements():
     try:
-        response = requests.get(CSE_ANNOUNCEMENTS_URL, timeout=10)
+        payload = {
+            "selectedCompany": [],
+            "selectedCategory": ["CORPORATE DISCLOSURE"],
+            "fromDate": "",
+            "toDate": ""
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": CSE_API_KEY,
+            "Origin": "https://www.cse.lk",
+            "Referer": "https://www.cse.lk/announcements",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        response = requests.post(CSE_ANNOUNCEMENTS_URL, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
-        return response.content
+        return response.json()
     except requests.RequestException as e:
-        print(f"Error fetching CSE announcements: {e}")
+        print(f"Error fetching CSE announcements from API: {e}")
+        if hasattr(e, 'response') and e.response:
+            print(f"Response status: {e.response.status_code}")
         return None
 
-def parse_dividends(html_content):
-    soup = BeautifulSoup(html_content, 'html.parser')
+def parse_dividends(data):
     dividends = []
     
-    # CSE typically puts corporate disclosures in a table with class 'table' or similar
-    table = soup.find('table')
-    if not table:
-        print("No announcement table found.")
+    if not isinstance(data, list):
+        print("Unexpected API response format (not a list).")
         return dividends
         
-    rows = table.find_all('tr')
-    for row in rows[1:]: # Skip header
-        cols = row.find_all('td')
-        if len(cols) >= 3:
-            symbol = cols[0].text.strip()
-            date_raw = cols[1].text.strip()
-            # Convert DD-MM-YYYY to YYYY-MM-DD for MySQL
-            try:
-                date_obj = datetime.strptime(date_raw, '%d-%m-%Y')
-                mysql_date = date_obj.strftime('%Y-%m-%d')
-            except ValueError:
-                mysql_date = None # Or handle appropriately
-            title = cols[2].text.strip().lower()
+    for item in data:
+        # The API returns an array of objects
+        # Use securityCode as symbol if available, fallback to companyName
+        symbol = item.get('securityCode', item.get('companyName', '')).strip()
+        date_raw = item.get('announcementDate', '').strip()
+        title = item.get('announcementTitle', '').strip().lower()
+        description = item.get('announcementDescription', '').strip().lower()
+        
+        full_text = f"{title} {description}"
+        
+        # Convert DD-MM-YYYY to YYYY-MM-DD for MySQL
+        try:
+            date_obj = datetime.strptime(date_raw, '%d-%m-%Y')
+            mysql_date = date_obj.strftime('%Y-%m-%d')
+        except (ValueError, TypeError):
+            mysql_date = None
             
-            # Check for dividend keywords
-            if 'dividend' in title or 'scrip' in title or 'xd' in title:
-                print(f"Found Dividend Announcement for {symbol}: {title}")
-                
-                # Basic extraction heuristics
-                amount_per_share = 0.0
-                dividend_type = "Interim"
-                if 'final' in title:
-                    dividend_type = "Final"
-                
-                # Attempt to extract amount (e.g., Rs. 5.00)
-                import re
-                match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', title)
-                if match:
+        # Check for dividend keywords
+        if 'dividend' in full_text or 'scrip' in full_text or 'xd' in full_text:
+            print(f"Found Potential Dividend Announcement for {symbol}: {description}")
+            
+            # Basic extraction heuristics
+            amount_per_share = 0.0
+            dividend_type = "Interim"
+            if 'final' in full_text:
+                dividend_type = "Final"
+            
+            # Attempt to extract amount (e.g., Rs. 5.00)
+            match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', full_text)
+            if match:
+                try:
                     amount_per_share = float(match.group(2))
+                except ValueError:
+                    amount_per_share = 0.0
                     
-                dividends.append({
-                    'symbol': symbol,
-                    'amount_per_share': amount_per_share,
-                    'type': dividend_type,
-                    'raw_text': title,
-                    'date': mysql_date
-                })
+            dividends.append({
+                'symbol': symbol,
+                'amount_per_share': amount_per_share,
+                'type': dividend_type,
+                'raw_text': description[:250],
+                'date': mysql_date
+            })
                 
     return dividends
 
@@ -99,9 +119,6 @@ def store_dividends(dividends):
         return
         
     cursor = conn.cursor()
-    
-    # In a real app, we'd trigger a webhook to Laravel here to broadcast the event
-    # e.g. requests.post('http://app/api/webhook/dividend', json=dividend)
     
     for div in dividends:
         # Insert announcement
@@ -124,20 +141,22 @@ def store_dividends(dividends):
     conn.close()
 
 def run():
-    print("Starting dividend scraper...")
-    html_content = fetch_announcements()
-    if html_content:
-        dividends = parse_dividends(html_content)
+    print("Starting dividend scraper (API mode)...")
+    data = fetch_announcements()
+    if data:
+        dividends = parse_dividends(data)
         if dividends:
             store_dividends(dividends)
             print(f"Stored {len(dividends)} dividends.")
         else:
-            print("No dividend announcements found.")
+            print("No dividend announcements found in current API response.")
+    else:
+        print("Failed to fetch data from CSE API.")
 
 if __name__ == "__main__":
     import sys
     
-    # Allow running once via command line argument (e.g., for manual triggers)
+    # Allow running once via command line argument
     if len(sys.argv) > 1 and sys.argv[1] == '--once':
         run()
     else:
