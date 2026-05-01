@@ -1,8 +1,7 @@
 import os
 import time
 import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 import mysql.connector
 from dotenv import load_dotenv
 import re
@@ -15,11 +14,11 @@ DB_USER = os.getenv("DB_USERNAME", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
-CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/getAnnouncementData"
-CSE_API_KEY = "Q3NlMTIzQXBp"
+# Updated API endpoint discovered via browser inspection
+CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/approvedAnnouncement"
 
 def get_db_connection():
-    max_retries = 5
+    max_retries = 3
     for i in range(max_retries):
         try:
             return mysql.connector.connect(
@@ -29,30 +28,33 @@ def get_db_connection():
                 database=DB_NAME
             )
         except mysql.connector.Error as err:
+            # Fallback for local dev if 'db' host (Docker) fails
+            if i == 0 and DB_HOST == "db":
+                try:
+                    return mysql.connector.connect(host="127.0.0.1", user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+                except: pass
+            
             if i < max_retries - 1:
-                print(f"Database connection failed, retrying in 5s... ({i+1}/{max_retries})")
-                time.sleep(5)
+                time.sleep(2)
             else:
-                print(f"Error connecting to database after {max_retries} attempts: {err}")
+                print(f"Error connecting to database: {err}")
                 return None
 
 def fetch_announcements():
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
-        # Fetch last 60 days to ensure we get recent dividends
-        from_date = (datetime.now().replace(day=1)).strftime('%Y-%m-%d') 
+        # Fetch wide range to ensure we get historical data for the dashboard
+        from_date = (datetime.now() - timedelta(days=120)).strftime('%Y-%m-%d')
+        to_date = datetime.now().strftime('%Y-%m-%d')
         
         payload = {
-            "allCategories": True,
-            "allCompanies": True,
-            "companyIds": [],
-            "categories": [],
+            "selectedCompany": [],
+            "selectedCategory": ["CASH DIVIDEND"], # The API might ignore this but we send it
             "fromDate": from_date,
-            "toDate": today
+            "toDate": to_date
         }
         headers = {
             "Content-Type": "application/json",
-            "Accept": "application/json",
+            "Accept": "application/json, text/plain, */*",
             "Origin": "https://www.cse.lk",
             "Referer": "https://www.cse.lk/announcements",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -61,94 +63,86 @@ def fetch_announcements():
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error fetching CSE announcements from API: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response status: {e.response.status_code}")
+        print(f"Error fetching CSE announcements: {e}")
         return None
 
 def parse_dividends(data):
     dividends = []
+    items = data.get('approvedAnnouncements', [])
+    print(f"Total items received from API: {len(items)}")
     
-    # The new API returns a nested object: {"Announcement": {"CASH DIVIDEND": [...], ...}}
-    announcements_data = data.get('Announcement', {})
-    if not announcements_data:
-        print("No 'Announcement' section found in API response.")
+    if not items:
         return dividends
         
-    # We are specifically interested in dividends
-    dividend_categories = ['CASH DIVIDEND', 'INTERIM DIVIDEND', 'FINAL DIVIDEND', 'SCRIP DIVIDEND']
-    
-    for category in dividend_categories:
-        items = announcements_data.get(category, [])
-        for item in items:
-            symbol = item.get('symbol', '').strip()
-            date_raw = item.get('date', '').strip() # Announcement date
-            description = item.get('description', '').strip()
+    for item in items:
+        category = item.get('announcementCategory', '').upper()
+        # We only care about dividends
+        if 'DIVIDEND' not in category:
+            continue
             
-            # Extract XD Date if available (usually in description or a specific field if we're lucky)
-            # The API might have a specific field for this in the new version
-            xd_date = item.get('xdDate')
-            if xd_date:
-                try:
-                    # Handle YYYY-MM-DD or DD-MM-YYYY
-                    if '-' in xd_date:
-                        parts = xd_date.split('-')
-                        if len(parts[0]) == 4: # YYYY-MM-DD
-                            xd_date = datetime.strptime(xd_date, '%Y-%m-%d').strftime('%Y-%m-%d')
-                        else: # DD-MM-YYYY
-                            xd_date = datetime.strptime(xd_date, '%d-%m-%Y').strftime('%Y-%m-%d')
-                except:
-                    xd_date = None
+        print(f"Checking potential dividend: {item.get('company')} | {category}")
+        
+        symbol = item.get('symbol')
+        if not symbol:
+            # Fallback: Many announcements have the symbol as the first part of the company name or a separate field
+            # For now, let's just log it
+            print(f"  Skipping: No symbol found for {item.get('company')}")
+            continue
+            
+        date_raw = item.get('dateOfAnnouncement', '') # e.g. "30 Apr 2026"
+        xd_date_raw = item.get('xd') # e.g. "2026-05-10"
+        description = item.get('remarks', '') or category
+        
+        # Convert dateOfAnnouncement
+        try:
+            date_obj = datetime.strptime(date_raw, '%d %b %Y')
+            mysql_date = date_obj.strftime('%Y-%m-%d')
+        except:
+            mysql_date = datetime.now().strftime('%Y-%m-%d')
 
-            # Convert announcement date
+        # Amount extraction from category or remarks
+        amount_per_share = 0.0
+        # Typical format: "Rs. 5.00 per share"
+        match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', (description + " " + category).lower())
+        if match:
             try:
-                date_obj = datetime.strptime(date_raw, '%Y-%m-%d')
-                mysql_date = date_obj.strftime('%Y-%m-%d')
-            except:
-                mysql_date = None
-                
-            print(f"Found {category} for {symbol}: {description}")
-            
-            # Amount extraction
-            amount_per_share = 0.0
-            match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', description.lower())
-            if match:
-                try:
-                    amount_per_share = float(match.group(2))
-                except ValueError:
-                    amount_per_share = 0.0
-            
-            dividends.append({
-                'symbol': symbol,
-                'amount_per_share': amount_per_share,
-                'type': category.title(),
-                'raw_text': description[:250],
-                'date': mysql_date,
-                'xd_date': xd_date
-            })
+                amount_per_share = float(match.group(2))
+            except ValueError:
+                amount_per_share = 0.0
+        
+        dividends.append({
+            'symbol': symbol,
+            'amount_per_share': amount_per_share,
+            'type': category.title(),
+            'raw_text': description[:250],
+            'date': mysql_date,
+            'xd_date': xd_date_raw
+        })
                 
     return dividends
 
 def store_dividends(dividends):
     conn = get_db_connection()
-    if not conn:
-        return
-        
+    if not conn: return
     cursor = conn.cursor()
     
     for div in dividends:
-        # Insert announcement
-        sql_ann = "INSERT INTO announcements (symbol, announcement_type, date, raw_text, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
-        val_ann = (div['symbol'], 'Dividend', div['date'], div['raw_text'])
-        
-        # Insert processed dividend
-        sql_div = "INSERT INTO dividends (symbol, amount_per_share, type, xd_date, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
-        val_div = (div['symbol'], div['amount_per_share'], div['type'], div['xd_date'])
-        
         try:
-            cursor.execute(sql_ann, val_ann)
-            cursor.execute(sql_div, val_div)
-            print(f"Saved {div['symbol']} to DB.")
+            # Check if exists to avoid duplicates
+            cursor.execute("SELECT id FROM dividends WHERE symbol = %s AND amount_per_share = %s AND xd_date = %s", 
+                          (div['symbol'], div['amount_per_share'], div['xd_date']))
+            if cursor.fetchone():
+                continue
+
+            # Insert announcement
+            sql_ann = "INSERT INTO announcements (symbol, announcement_type, date, raw_text, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
+            cursor.execute(sql_ann, (div['symbol'], 'Dividend', div['date'], div['raw_text']))
+            
+            # Insert processed dividend
+            sql_div = "INSERT INTO dividends (symbol, amount_per_share, type, xd_date, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
+            cursor.execute(sql_div, (div['symbol'], div['amount_per_share'], div['type'], div['xd_date']))
+            
+            print(f"Saved {div['symbol']} dividend: Rs. {div['amount_per_share']}")
         except mysql.connector.Error as err:
             print(f"Error saving {div['symbol']}: {err}")
     
@@ -157,32 +151,24 @@ def store_dividends(dividends):
     conn.close()
 
 def run():
-    print("Starting dividend scraper (API mode)...")
+    print(f"[{datetime.now()}] Starting dividend scraper...")
     data = fetch_announcements()
     if data:
         dividends = parse_dividends(data)
         if dividends:
             store_dividends(dividends)
-            print(f"Stored {len(dividends)} dividends.")
+            print(f"Processed {len(dividends)} dividends.")
         else:
-            print("No dividend announcements found in current API response.")
+            print("No new dividend announcements found.")
     else:
-        print("Failed to fetch data from CSE API.")
+        print("Failed to fetch data.")
 
 if __name__ == "__main__":
     import sys
-    
-    # Allow running once via command line argument
     if len(sys.argv) > 1 and sys.argv[1] == '--once':
         run()
     else:
-        # Continuous polling mode
-        print("Scraper service started. Polling every hour...")
         while True:
-            try:
-                run()
-            except Exception as e:
-                print(f"Unexpected error during scrape: {e}")
-            
-            print("Sleeping for 1 hour before next scrape...")
+            try: run()
+            except Exception as e: print(f"Error: {e}")
             time.sleep(3600)
