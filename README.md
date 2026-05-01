@@ -21,6 +21,16 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 
 ---
 
+## ✨ Key Features
+
+-   **Autonomous CSE Scraping**: Leverages the official CSE API for high-frequency dividend monitoring.
+-   **Intelligent Parsing**: Automatically extracts dividend amounts, types (Interim/Final), and XD dates from disclosures.
+-   **Portfolio Analytics**: Real-time calculation of Yield on Cost (YoC) and Estimated Annual Income.
+-   **Zero-Config Demo Mode**: Automatically displays a curated sample portfolio if no user holdings are detected, ensuring immediate visual feedback.
+-   **Hardened CI/CD**: Pre-built image strategy with GHCR and Tailscale for secure, resource-efficient remote deployments.
+
+---
+
 ## 🛠️ Tech Stack
 
 | Category | Technology |
@@ -50,10 +60,15 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
     cd Dividend-Tracker
     ```
 2.  Launch the automated setup:
-    ```bash
-    ./run.sh
-    ```
-    *This script handles starting containers, running migrations, and initiating the scraper.*
+    - **Windows**:
+      ```bash
+      run.bat
+      ```
+    - **Linux/macOS**:
+      ```bash
+      ./run.sh
+      ```
+    *These scripts handle starting containers, running migrations, and initiating the scraper.*
 
 3.  Access the applications:
     - **Dashboard**: [http://localhost:8001](http://localhost:8001)

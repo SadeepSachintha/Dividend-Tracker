@@ -150,12 +150,16 @@ jobs:
       with:
         authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
+    - name: Verify Network Connectivity
+      run: ping -c 3 ${{ secrets.VM_HOST }}
+
     - name: Deploy to Ubuntu VM
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
         username: ${{ secrets.VM_USERNAME }}
         key: ${{ secrets.VM_SSH_KEY }}
+        debug: true
         script: |
           cd /home/sadeep/dividend-tracker
           git pull origin main
