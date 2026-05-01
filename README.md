@@ -23,7 +23,7 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 
 ## ✨ Key Features
 
--   **Autonomous CSE Scraping**: Leverages the official CSE API for high-frequency dividend monitoring.
+-   **Autonomous CSE Scraping**: Leverages the latest **CSE API v2** for high-frequency dividend monitoring.
 -   **Intelligent Parsing**: Automatically extracts dividend amounts, types (Interim/Final), and XD dates from disclosures.
 -   **Portfolio Analytics**: Real-time calculation of Yield on Cost (YoC) and Estimated Annual Income.
 -   **Manual & Autonomous Sync**: Trigger a manual scraper run directly from the dashboard or rely on the autonomous background service.
@@ -72,19 +72,21 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
       ```
     *These scripts handle starting containers, running migrations, and initiating the scraper.*
 
-4.  Populate with real recent data (Optional):
-    - **Docker**:
+4.  **Data Initialization**:
+    Populate your portfolio and fetch real market data to activate the dashboard:
+    - **Step 1: Create Portfolio Holdings** (Removes Demo Mode):
+      ```bash
+      docker exec dividend_laravel_app php artisan db:seed
+      ```
+    - **Step 2: Seed Real Historical Dividends** (Optional):
       ```bash
       docker exec dividend_laravel_app php artisan db:seed --class=RealDividendSeeder
       ```
-    - **Local**:
-      ```bash
-      php artisan db:seed --class=RealDividendSeeder
-      ```
 
-3.  Access the applications:
+3.  **Access & Management**:
     - **Dashboard**: [http://localhost:8001](http://localhost:8001)
     - **phpMyAdmin**: [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost/phpmyadmin](http://localhost/phpmyadmin) (XAMPP)
+    - **Manual Sync**: Click the "Sync" button on the UI to trigger an immediate scraper run via API v2.
 
 ---
 
