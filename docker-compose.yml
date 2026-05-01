@@ -78,6 +78,21 @@ services:
     networks:
       - dividend_network
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: dividend_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: secret
+    depends_on:
+      - db
+    networks:
+      - dividend_network
+
 networks:
   dividend_network:
     driver: bridge
