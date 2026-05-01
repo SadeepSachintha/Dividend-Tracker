@@ -11,7 +11,7 @@ load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_USER = os.getenv("DB_USERNAME", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "secret")
 DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
 # Updated API endpoint discovered via browser inspection
