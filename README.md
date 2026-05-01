@@ -13,10 +13,11 @@ A high-performance, real-time dividend tracking system designed to monitor **Col
 
 The system utilizes a robust **Producer-Consumer** architecture containerized with Docker:
 
--   **The Producer (Python Scraper)**: An autonomous background service that polls the CSE website every hour, parses complex announcement tables, and synchronizes the latest dividend events into a shared MySQL database.
+-   **The Producer (Python Scraper)**: An autonomous background service that interacts directly with the **CSE API endpoint**. It fetches corporate disclosures, parses JSON responses, and synchronizes dividend events into a shared MySQL database.
 -   **The Broker (Redis)**: Manages communication and real-time broadcasting queues.
 -   **The Consumer (Laravel 12)**: A modern web interface that processes user holdings, calculates upcoming payouts, and broadcasts live alerts.
 -   **Real-Time Engine (Laravel Reverb)**: Powers the WebSocket server for instantaneous dashboard updates without page refreshes.
+-   **Database Manager (phpMyAdmin)**: Provides a web interface for database administration on port `8080`.
 
 ---
 
@@ -28,6 +29,7 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 | **Scraper** | [Python 3.11](https://www.python.org/) (BeautifulSoup, Requests) |
 | **Real-Time** | [Laravel Reverb](https://reverb.laravel.com/) (Native WebSockets) |
 | **Database** | [MySQL 8.0](https://www.mysql.com/) |
+| **DB Management** | [phpMyAdmin](https://www.phpmyadmin.net/) |
 | **Cache/Broker** | [Redis](https://redis.io/) |
 | **Server** | [Nginx](https://www.nginx.com/) |
 | **DevOps** | [Docker](https://www.docker.com/), [GitHub Actions](https://github.com/features/actions) |
@@ -49,9 +51,13 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
     ```
 2.  Launch the automated setup:
     ```bash
-    ./run.bat
+    ./run.sh
     ```
-    *This script handles building images, running migrations, and initiating the scraper automatically.*
+    *This script handles starting containers, running migrations, and initiating the scraper.*
+
+3.  Access the applications:
+    - **Dashboard**: [http://localhost:8001](http://localhost:8001)
+    - **phpMyAdmin**: [http://localhost:8080](http://localhost:8080) (User: `root`, Pass: `secret`)
 
 ---
 
