@@ -15,7 +15,7 @@ DB_USER = os.getenv("DB_USERNAME", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
-CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/smd/getAnnouncementData"
+CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/getAnnouncementData"
 CSE_API_KEY = "Q3NlMTIzQXBp"
 
 def get_db_connection():
@@ -38,19 +38,24 @@ def get_db_connection():
 
 def fetch_announcements():
     try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        # Fetch last 60 days to ensure we get recent dividends
+        from_date = (datetime.now().replace(day=1)).strftime('%Y-%m-%d') 
+        
         payload = {
-            "selectedCompany": [],
-            "selectedCategory": ["CORPORATE DISCLOSURE"],
-            "fromDate": "",
-            "toDate": ""
+            "allCategories": True,
+            "allCompanies": True,
+            "companyIds": [],
+            "categories": [],
+            "fromDate": from_date,
+            "toDate": today
         }
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": CSE_API_KEY,
+            "Accept": "application/json",
             "Origin": "https://www.cse.lk",
             "Referer": "https://www.cse.lk/announcements",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "X-Requested-With": "XMLHttpRequest"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         }
         response = requests.post(CSE_ANNOUNCEMENTS_URL, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
@@ -64,51 +69,62 @@ def fetch_announcements():
 def parse_dividends(data):
     dividends = []
     
-    if not isinstance(data, list):
-        print("Unexpected API response format (not a list).")
+    # The new API returns a nested object: {"Announcement": {"CASH DIVIDEND": [...], ...}}
+    announcements_data = data.get('Announcement', {})
+    if not announcements_data:
+        print("No 'Announcement' section found in API response.")
         return dividends
         
-    for item in data:
-        # The API returns an array of objects
-        # Use securityCode as symbol if available, fallback to companyName
-        symbol = item.get('securityCode', item.get('companyName', '')).strip()
-        date_raw = item.get('announcementDate', '').strip()
-        title = item.get('announcementTitle', '').strip().lower()
-        description = item.get('announcementDescription', '').strip().lower()
-        
-        full_text = f"{title} {description}"
-        
-        # Convert DD-MM-YYYY to YYYY-MM-DD for MySQL
-        try:
-            date_obj = datetime.strptime(date_raw, '%d-%m-%Y')
-            mysql_date = date_obj.strftime('%Y-%m-%d')
-        except (ValueError, TypeError):
-            mysql_date = None
+    # We are specifically interested in dividends
+    dividend_categories = ['CASH DIVIDEND', 'INTERIM DIVIDEND', 'FINAL DIVIDEND', 'SCRIP DIVIDEND']
+    
+    for category in dividend_categories:
+        items = announcements_data.get(category, [])
+        for item in items:
+            symbol = item.get('symbol', '').strip()
+            date_raw = item.get('date', '').strip() # Announcement date
+            description = item.get('description', '').strip()
             
-        # Check for dividend keywords
-        if 'dividend' in full_text or 'scrip' in full_text or 'xd' in full_text:
-            print(f"Found Potential Dividend Announcement for {symbol}: {description}")
+            # Extract XD Date if available (usually in description or a specific field if we're lucky)
+            # The API might have a specific field for this in the new version
+            xd_date = item.get('xdDate')
+            if xd_date:
+                try:
+                    # Handle YYYY-MM-DD or DD-MM-YYYY
+                    if '-' in xd_date:
+                        parts = xd_date.split('-')
+                        if len(parts[0]) == 4: # YYYY-MM-DD
+                            xd_date = datetime.strptime(xd_date, '%Y-%m-%d').strftime('%Y-%m-%d')
+                        else: # DD-MM-YYYY
+                            xd_date = datetime.strptime(xd_date, '%d-%m-%Y').strftime('%Y-%m-%d')
+                except:
+                    xd_date = None
+
+            # Convert announcement date
+            try:
+                date_obj = datetime.strptime(date_raw, '%Y-%m-%d')
+                mysql_date = date_obj.strftime('%Y-%m-%d')
+            except:
+                mysql_date = None
+                
+            print(f"Found {category} for {symbol}: {description}")
             
-            # Basic extraction heuristics
+            # Amount extraction
             amount_per_share = 0.0
-            dividend_type = "Interim"
-            if 'final' in full_text:
-                dividend_type = "Final"
-            
-            # Attempt to extract amount (e.g., Rs. 5.00)
-            match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', full_text)
+            match = re.search(r'(rs\.?\s*|rupees?\s*)(\d+\.?\d*)', description.lower())
             if match:
                 try:
                     amount_per_share = float(match.group(2))
                 except ValueError:
                     amount_per_share = 0.0
-                    
+            
             dividends.append({
                 'symbol': symbol,
                 'amount_per_share': amount_per_share,
-                'type': dividend_type,
+                'type': category.title(),
                 'raw_text': description[:250],
-                'date': mysql_date
+                'date': mysql_date,
+                'xd_date': xd_date
             })
                 
     return dividends
@@ -126,8 +142,8 @@ def store_dividends(dividends):
         val_ann = (div['symbol'], 'Dividend', div['date'], div['raw_text'])
         
         # Insert processed dividend
-        sql_div = "INSERT INTO dividends (symbol, amount_per_share, type, created_at, updated_at) VALUES (%s, %s, %s, NOW(), NOW())"
-        val_div = (div['symbol'], div['amount_per_share'], div['type'])
+        sql_div = "INSERT INTO dividends (symbol, amount_per_share, type, xd_date, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), NOW())"
+        val_div = (div['symbol'], div['amount_per_share'], div['type'], div['xd_date'])
         
         try:
             cursor.execute(sql_ann, val_ann)

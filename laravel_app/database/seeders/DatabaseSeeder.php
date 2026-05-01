@@ -15,11 +15,32 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $user = User::factory()->create([
+            'name' => 'Sadeep',
+            'email' => 'sadeep@example.com',
+            'password' => bcrypt('password'),
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Add sample holdings
+        \App\Models\Holding::create([
+            'user_id' => $user->id,
+            'symbol' => 'COMB.N0000',
+            'quantity' => 1500,
+            'avg_price' => 95.50,
+        ]);
+
+        \App\Models\Holding::create([
+            'user_id' => $user->id,
+            'symbol' => 'JKH.N0000',
+            'quantity' => 2000,
+            'avg_price' => 180.25,
+        ]);
+
+        \App\Models\Holding::create([
+            'user_id' => $user->id,
+            'symbol' => 'HNB.N0000',
+            'quantity' => 800,
+            'avg_price' => 165.00,
         ]);
     }
 }
