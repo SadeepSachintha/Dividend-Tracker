@@ -23,8 +23,8 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 
 ## ✨ Key Features
 
--   **Autonomous CSE Scraping**: Leverages the latest **CSE API v2** for high-frequency dividend monitoring and company data synchronization.
--   **Market Watch**: A comprehensive directory of all listed companies on the CSE, featuring real-time price tracking and dividend yield calculations.
+-   **Autonomous CSE Scraping**: Leverages the **CSE API v2** (`tradeSummary` and `approvedAnnouncement` endpoints) for high-frequency dividend monitoring and company data synchronization.
+-   **Market Watch**: A comprehensive directory of all ~290 listed companies on the CSE, populated via the `tradeSummary` endpoint, featuring real-time price tracking and dividend yield calculations.
 -   **Intelligent Parsing**: Automatically extracts dividend amounts, types (Interim/Final), and XD dates from disclosures.
 -   **Portfolio Analytics**: Real-time calculation of Yield on Cost (YoC) and Estimated Annual Income.
 -   **Manual & Autonomous Sync**: Trigger a manual scraper run directly from the dashboard or rely on the autonomous background service.
