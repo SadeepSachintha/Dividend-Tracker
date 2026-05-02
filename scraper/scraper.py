@@ -16,6 +16,7 @@ DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
 # Updated API endpoint discovered via browser inspection
 CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/approvedAnnouncement"
+CSE_TICKER_URL = "https://www.cse.lk/api/todaySharePrice"
 
 def get_db_connection():
     max_retries = 3
@@ -64,6 +65,20 @@ def fetch_announcements():
         return response.json()
     except requests.RequestException as e:
         print(f"Error fetching CSE announcements: {e}")
+        return None
+
+def fetch_all_companies():
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        }
+        response = requests.post(CSE_TICKER_URL, json={}, headers=headers, timeout=15)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error fetching companies: {e}")
         return None
 
 def parse_dividends(data):
@@ -150,8 +165,54 @@ def store_dividends(dividends):
     cursor.close()
     conn.close()
 
+def sync_companies(companies):
+    conn = get_db_connection()
+    if not conn: return
+    cursor = conn.cursor()
+    
+    print(f"Syncing {len(companies)} companies...")
+    
+    for comp in companies:
+        symbol = comp.get('symbol')
+        if not symbol: continue
+        
+        name = comp.get('companyName') or symbol
+        sector = comp.get('sector')
+        price = comp.get('lastTradedPrice')
+        
+        try:
+            sql = """
+            INSERT INTO companies (symbol, name, sector, last_price, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE 
+                name = VALUES(name),
+                sector = VALUES(sector),
+                last_price = VALUES(last_price),
+                updated_at = NOW()
+            """
+            cursor.execute(sql, (symbol, name, sector, price))
+        except mysql.connector.Error as err:
+            # Table might not exist yet if migrations haven't run
+            if err.errno == 1146: 
+                print("Companies table does not exist. Please run migrations.")
+                break
+            print(f"Error syncing {symbol}: {err}")
+            
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 def run():
     print(f"[{datetime.now()}] Starting dividend scraper...")
+    
+    # Sync companies first
+    print("Fetching master company list...")
+    companies_data = fetch_all_companies()
+    if companies_data:
+        sync_companies(companies_data)
+    
+    # Fetch dividends
+    print("Fetching dividend announcements...")
     data = fetch_announcements()
     if data:
         dividends = parse_dividends(data)
@@ -161,7 +222,7 @@ def run():
         else:
             print("No new dividend announcements found.")
     else:
-        print("Failed to fetch data.")
+        print("Failed to fetch announcements.")
 
 if __name__ == "__main__":
     import sys

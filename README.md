@@ -13,7 +13,7 @@ A high-performance, real-time dividend tracking system designed to monitor **Col
 
 The system utilizes a robust **Producer-Consumer** architecture containerized with Docker:
 
--   **The Producer (Python Scraper)**: An autonomous background service that interacts directly with the **CSE API endpoint**. It fetches corporate disclosures, parses JSON responses, and synchronizes dividend events into a shared MySQL database.
+-   **The Producer (Python Scraper)**: An autonomous background service that interacts directly with the **CSE API**. It maintains a master list of all ~290 listed companies, fetches corporate disclosures, parses JSON responses, and synchronizes dividend events into a shared MySQL database.
 -   **The Broker (Redis)**: Manages communication and real-time broadcasting queues.
 -   **The Consumer (Laravel 12)**: A modern web interface that processes user holdings, calculates upcoming payouts, and broadcasts live alerts.
 -   **Real-Time Engine (Laravel Reverb)**: Powers the WebSocket server for instantaneous dashboard updates without page refreshes.
@@ -23,7 +23,8 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 
 ## ✨ Key Features
 
--   **Autonomous CSE Scraping**: Leverages the latest **CSE API v2** for high-frequency dividend monitoring.
+-   **Autonomous CSE Scraping**: Leverages the latest **CSE API v2** for high-frequency dividend monitoring and company data synchronization.
+-   **Market Watch**: A comprehensive directory of all listed companies on the CSE, featuring real-time price tracking and dividend yield calculations.
 -   **Intelligent Parsing**: Automatically extracts dividend amounts, types (Interim/Final), and XD dates from disclosures.
 -   **Portfolio Analytics**: Real-time calculation of Yield on Cost (YoC) and Estimated Annual Income.
 -   **Manual & Autonomous Sync**: Trigger a manual scraper run directly from the dashboard or rely on the autonomous background service.
@@ -82,11 +83,16 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
       ```bash
       docker exec dividend_laravel_app php artisan db:seed --class=RealDividendSeeder
       ```
+    - **Step 3: Sync Master Company List**:
+      ```bash
+      docker exec dividend_scraper python scraper.py --once
+      ```
 
 3.  **Access & Management**:
     - **Dashboard**: [http://localhost:8001](http://localhost:8001)
+    - **Market Watch**: [http://localhost:8001/market](http://localhost:8001/market)
     - **phpMyAdmin**: [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost/phpmyadmin](http://localhost/phpmyadmin) (XAMPP)
-    - **Manual Sync**: Click the "Sync" button on the UI to trigger an immediate scraper run via API v2.
+    - **Manual Sync**: Click the "Sync" button on the UI to trigger an immediate scraper run (Announcements + Company Prices).
 
 ---
 
