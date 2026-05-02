@@ -16,7 +16,7 @@ DB_NAME = os.getenv("DB_DATABASE", "dividend_tracker")
 
 # Updated API endpoint discovered via browser inspection
 CSE_ANNOUNCEMENTS_URL = "https://www.cse.lk/api/approvedAnnouncement"
-CSE_TICKER_URL = "https://www.cse.lk/api/todaySharePrice"
+CSE_TICKER_URL = "https://www.cse.lk/api/tradeSummary"
 
 def get_db_connection():
     max_retries = 3
@@ -76,7 +76,8 @@ def fetch_all_companies():
         }
         response = requests.post(CSE_TICKER_URL, json={}, headers=headers, timeout=15)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        return data.get('reqTradeSummery', [])
     except requests.RequestException as e:
         print(f"Error fetching companies: {e}")
         return None
@@ -176,9 +177,9 @@ def sync_companies(companies):
         symbol = comp.get('symbol')
         if not symbol: continue
         
-        name = comp.get('companyName') or symbol
-        sector = comp.get('sector')
-        price = comp.get('lastTradedPrice')
+        name = comp.get('name') or symbol
+        sector = comp.get('sector', 'Unknown')
+        price = comp.get('price') or comp.get('closingPrice') or 0.0
         
         try:
             sql = """
