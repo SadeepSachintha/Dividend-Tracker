@@ -46,7 +46,7 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 | **Cache/Broker** | [Redis](https://redis.io/) |
 | **Server** | [Nginx](https://www.nginx.com/) |
 | **DevOps** | [Docker](https://www.docker.com/), [GitHub Actions](https://github.com/features/actions) |
-| **Network** | [Tailscale](https://tailscale.com/) (Secure Private Networking) |
+| **Network** | Public IP / Oracle Cloud VCN |
 
 ---
 
@@ -101,15 +101,15 @@ The system utilizes a robust **Producer-Consumer** architecture containerized wi
 The project features a high-performance CI/CD pipeline using **GitHub Actions**, **GHCR (GitHub Container Registry)**, and **Tailscale**.
 
 ### 1. Build & Push Strategy
-To prevent resource exhaustion on small target VMs, Docker images are pre-built and compiled on GitHub's infrastructure and pushed to **GHCR**. The VM simply pulls the latest pre-compiled images, resulting in near-instant deployments with minimal CPU/RAM usage.
+To prevent resource exhaustion on small target VMs (like Oracle's 1GB RAM instances), Docker images are pre-built on GitHub's infrastructure and pushed to **GHCR**. The VM uses a specialized `docker-compose.prod.yml` that limits memory usage and enables Swap space to ensure stability.
 
 ### 2. Required GitHub Secrets
 | Secret | Description |
 | :--- | :--- |
-| `VM_HOST` | The **Tailscale IP** of your Ubuntu VM. |
-| `VM_USERNAME` | Your VM login username. |
+| `VM_HOST` | The **Public IP** of your Ubuntu VM. |
+| `VM_USERNAME` | Your VM login username (usually `ubuntu`). |
 | `VM_SSH_KEY` | Your OpenSSH Private Key. |
-| `TAILSCALE_AUTHKEY` | A reusable Tailscale Auth Key. |
+| `DB_PASSWORD` | The production password for MySQL. |
 
 ---
 
@@ -121,6 +121,9 @@ The Laravel application requires several specific PHP extensions to handle the d
 
 ### Build Issues
 If the build fails on your local machine, ensure you are using **LF** line endings for the `Dockerfile`. If a container hangs, verify that your machine has enough allocated RAM (minimum 2GB recommended).
+
+### Oracle Cloud Connectivity
+If the deployment fails during the "SSH" step, ensure you have added an **Ingress Rule** in your Oracle Cloud VCN Security List for ports **22** (SSH) and **80** (HTTP) from source `0.0.0.0/0`.
 
 ### Scraper Restarting
 If you see an error stating "Container is restarting, wait until the container is running", it means the scraper script has exited. The scraper is now configured to run in a continuous loop (`while True:`) to prevent this.
