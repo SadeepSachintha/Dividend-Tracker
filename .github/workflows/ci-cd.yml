@@ -58,12 +58,19 @@ jobs:
     - name: Update .env for testing
       working-directory: ./laravel_app
       run: |
-        sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/' .env
-        sed -i 's/# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
-        sed -i 's/# DB_PORT=3306/DB_PORT=3306/' .env
-        sed -i 's/# DB_DATABASE=laravel/DB_DATABASE=dividend_testing/' .env
-        sed -i 's/# DB_USERNAME=root/DB_USERNAME=root/' .env
-        sed -i 's/# DB_PASSWORD=/DB_PASSWORD=root/' .env
+        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+        sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+        sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+        sed -i 's/DB_DATABASE=.*/DB_DATABASE=dividend_testing/' .env
+        sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/' .env
+        sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+
+    - name: Wait for MySQL
+      run: |
+        until mysqladmin ping -h"127.0.0.1" -u"root" -p"root" --silent; do
+          echo 'waiting for mysql...'
+          sleep 1
+        done
         
     - name: Run Migrations
       working-directory: ./laravel_app
