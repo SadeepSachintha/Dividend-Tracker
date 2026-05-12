@@ -153,8 +153,13 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         debug: true
         script: |
+          mkdir -p /home/ubuntu/dividend-tracker
           cd /home/ubuntu/dividend-tracker
-          git pull origin main
+          if [ ! -d ".git" ]; then
+            git clone https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
+          else
+            git pull origin main
+          fi
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker-compose -f docker-compose.prod.yml pull
           docker-compose -f docker-compose.prod.yml up -d
