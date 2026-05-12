@@ -177,7 +177,10 @@ jobs:
           git checkout -f main
           git pull origin main
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml down --remove-orphans || true
+          docker compose -f docker-compose.prod.yml up -d
+          echo "Waiting for containers to initialize..."
+          sleep 10
           docker exec dividend_laravel_app php artisan migrate --force
           docker exec dividend_laravel_app php artisan optimize:clear
