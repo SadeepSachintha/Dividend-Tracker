@@ -73,13 +73,17 @@ jobs:
           sleep 1
         done
         
+    - name: Create Database
+      run: |
+        mysql -h"127.0.0.1" -u"root" -p"root" -e "CREATE DATABASE IF NOT EXISTS dividend_testing;"
+
     - name: Run Migrations
       working-directory: ./laravel_app
-      run: php artisan migrate --force
+      run: php artisan migrate --force --seed 2>&1 || php artisan migrate:fresh --force --seed
       
     - name: Run PHPUnit
       working-directory: ./laravel_app
-      run: php artisan test
+      run: php artisan test --verbose
 
   lint-python:
     runs-on: ubuntu-latest
