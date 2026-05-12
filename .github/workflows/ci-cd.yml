@@ -156,7 +156,10 @@ jobs:
           mkdir -p /home/ubuntu/dividend-tracker
           cd /home/ubuntu/dividend-tracker
           if [ ! -d ".git" ]; then
-            git clone https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
+            git init
+            git remote add origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            git fetch
+            git checkout -f main
           else
             git pull origin main
           fi
