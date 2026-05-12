@@ -83,7 +83,7 @@ jobs:
       
     - name: Run PHPUnit
       working-directory: ./laravel_app
-      run: php artisan test --verbose
+      run: php artisan test
 
   lint-python:
     runs-on: ubuntu-latest
@@ -170,11 +170,12 @@ jobs:
           if [ ! -d ".git" ]; then
             git init
             git remote add origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-            git fetch
-            git checkout -f main
           else
-            git pull origin main
+            git remote set-url origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           fi
+          git fetch
+          git checkout -f main
+          git pull origin main
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker-compose -f docker-compose.prod.yml pull
           docker-compose -f docker-compose.prod.yml up -d
