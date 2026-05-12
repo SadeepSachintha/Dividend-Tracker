@@ -33,6 +33,7 @@ jobs:
     - name: Get Composer Cache Directory
       id: composer-cache
       run: |
+        cd laravel_app
         echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
         
     - name: Cache Composer Dependencies
