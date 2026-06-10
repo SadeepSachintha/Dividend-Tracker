@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dividend Tracker | Precision Yields</title>
+    <title>Dividend Tracker | SS Labz</title>
+    <!-- Favicon link -->
+    <link rel="icon" type="image/png" href="/logo.png">
     <!-- Modern Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS (CDN for zero-touch deployment) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Alpine.js for interactions -->
@@ -15,12 +17,16 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    fontFamily: { 
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'] 
+                    },
                     colors: {
-                        dark: '#0B0F19',
-                        card: '#151A2D',
-                        primary: '#38BDF8',
-                        accent: '#818CF8',
+                        dark: '#080c14',
+                        card: '#0e1422',
+                        primary: '#00f2fe',
+                        accent: '#0076ff',
+                        purple: '#7f00ff',
                         success: '#34D399',
                     }
                 }
@@ -28,24 +34,24 @@
         }
     </script>
     <style>
-        body { background-color: #0B0F19; color: #F1F5F9; }
+        body { background-color: #080c14; color: #F1F5F9; }
         .glass-panel {
-            background: rgba(21, 26, 45, 0.7);
+            background: rgba(14, 20, 34, 0.65);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .gradient-text {
-            background: linear-gradient(to right, #38BDF8, #818CF8);
+            background: linear-gradient(135deg, #00f2fe 0%, #0076ff 50%, #7f00ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2); }
+        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 242, 254, 0.2); }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0B0F19; }
+        ::-webkit-scrollbar-track { background: #080c14; }
         ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
     </style>
@@ -60,14 +66,14 @@
     <nav class="glass-panel sticky top-0 z-50 px-6 py-4 border-b border-white/5">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-                <h1 class="text-xl font-bold tracking-wide">Div<span class="gradient-text">Tracker</span></h1>
+                <a href="/" class="flex items-center gap-3 hover:opacity-90 transition-opacity">
+                    <img src="/logo.png" alt="SS Labz Logo" class="w-8 h-8 rounded-lg object-contain shadow-md shadow-primary/20">
+                    <h1 class="text-xl font-bold tracking-wide font-mono text-white">SS LABZ <span class="text-slate-400 font-normal">|</span> <span class="gradient-text font-sans font-extrabold">DivTracker</span></h1>
+                </a>
             </div>
             <div class="flex items-center gap-6">
                 <a href="{{ route('market') }}" class="text-sm font-medium text-slate-300 hover:text-primary transition-colors flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     Market Watch
                 </a>
                 <div class="relative cursor-pointer hover:text-primary transition-colors">
@@ -250,6 +256,21 @@
         </div>
 
     </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-white/5 bg-[#080c14]/80 backdrop-blur-md py-6 px-6 relative z-10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+                <img src="/logo.png" alt="SS Labz Logo" class="w-5 h-5 rounded-md opacity-80">
+                <span>&copy; {{ date('Y') }} <a href="https://ss-labz.pages.dev/" target="_blank" class="hover:text-primary transition-colors font-semibold">SS Labz</a>. All Rights Reserved.</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span>Engineered by <a href="https://ss-labz.pages.dev/" target="_blank" class="text-slate-400 hover:text-primary transition-colors font-medium">Sadeep Sachintha</a></span>
+                <span class="text-slate-700">|</span>
+                <a href="https://ss-labz.pages.dev/#portfolio" target="_blank" class="hover:text-primary transition-colors">Showcase</a>
+            </div>
+        </div>
+    </footer>
 
     <!-- Real-time Notifications Toast Overlay (Alpine.js) -->
     <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3">

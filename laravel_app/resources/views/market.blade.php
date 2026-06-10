@@ -3,25 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Watch | Dividend Tracker</title>
+    <title>Market Watch | Dividend Tracker - SS Labz</title>
+    <!-- Favicon link -->
+    <link rel="icon" type="image/png" href="/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'] 
+                    },
+                    colors: {
+                        dark: '#080c14',
+                        card: '#0e1422',
+                        primary: '#00f2fe',
+                        accent: '#0076ff',
+                        purple: '#7f00ff',
+                        success: '#34D399',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body {
             font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: linear-gradient(135deg, #080c14 0%, #0e1422 100%);
             color: #f8fafc;
             min-height: 100vh;
         }
         .glass {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(14, 20, 34, 0.65);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .card-hover:hover {
             transform: translateY(-5px);
-            border-color: rgba(59, 130, 246, 0.5);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            border-color: rgba(0, 242, 254, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 242, 254, 0.15);
         }
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out forwards;
@@ -36,14 +59,19 @@
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-            <div>
-                <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-                    Market Watch
-                </h1>
-                <p class="text-slate-400 mt-1">Explore all listed companies and their dividend status</p>
+            <div class="flex items-center gap-4">
+                <a href="/" class="hover:opacity-90 transition-opacity">
+                    <img src="/logo.png" alt="SS Labz Logo" class="w-12 h-12 rounded-xl object-contain shadow-lg shadow-primary/20">
+                </a>
+                <div>
+                    <h1 class="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-[#00f2fe] via-[#0076ff] to-[#7f00ff] tracking-wide">
+                        Market Watch
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-1">Product of <a href="https://ss-labz.pages.dev/" target="_blank" class="text-primary hover:underline font-semibold font-mono">SS LABZ</a> | Explore all listed companies and their dividend status</p>
+                </div>
             </div>
             <a href="/" class="glass px-6 py-2.5 rounded-xl font-semibold hover:bg-white/10 transition-all flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 Back to Dashboard
             </a>
         </header>
@@ -66,7 +94,7 @@
                     </select>
                 </div>
                 <div class="flex items-end">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-blue-900/20">
+                    <button type="submit" class="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-slate-950 font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20">
                         Filter Market
                     </button>
                 </div>
@@ -83,11 +111,11 @@
             @forelse($companies as $company)
                 <div class="glass p-5 rounded-2xl transition-all duration-300 card-hover group relative overflow-hidden">
                     <!-- Background Decoration -->
-                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
                     
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <span class="text-xs font-bold text-blue-400 uppercase tracking-wider">{{ $company->sector }}</span>
+                            <span class="text-xs font-bold text-primary uppercase tracking-wider">{{ $company->sector }}</span>
                             <h3 class="text-xl font-bold mt-1">{{ $company->symbol }}</h3>
                         </div>
                         <div class="text-right">
@@ -121,7 +149,7 @@
                         </div>
                     </div>
 
-                    <button class="w-full bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold py-2 rounded-lg transition-all border border-white/5">
+                    <button class="w-full bg-slate-800 hover:bg-slate-700 hover:border-primary/50 text-white text-sm font-bold py-2 rounded-lg transition-all border border-white/5">
                         Add to Tracker
                     </button>
                 </div>
@@ -138,6 +166,21 @@
         <div class="mt-12 mb-20">
             {{ $companies->links() }}
         </div>
+
+        <!-- Footer -->
+        <footer class="mt-20 border-t border-white/5 bg-[#080c14]/80 backdrop-blur-md py-6 px-6 rounded-2xl relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+                <div class="flex items-center gap-2">
+                    <img src="/logo.png" alt="SS Labz Logo" class="w-5 h-5 rounded-md opacity-80">
+                    <span>&copy; {{ date('Y') }} <a href="https://ss-labz.pages.dev/" target="_blank" class="hover:text-primary transition-colors font-semibold">SS Labz</a>. All Rights Reserved.</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span>Engineered by <a href="https://ss-labz.pages.dev/" target="_blank" class="text-slate-400 hover:text-primary transition-colors font-medium">Sadeep Sachintha</a></span>
+                    <span class="text-slate-700">|</span>
+                    <a href="https://ss-labz.pages.dev/#portfolio" target="_blank" class="hover:text-primary transition-colors">Showcase</a>
+                </div>
+            </div>
+        </footer>
     </div>
 </body>
 </html>
